@@ -7,10 +7,10 @@ const app = express();
 const port = 5000;
 
 // --- CONFIGURAZIONE ---
-const RPC_URL = "https://ethereum-sepolia.publicnode.com"; // O il tuo provider (Infura/Alchemy)
+const RPC_URL = "https://ethereum-sepolia.publicnode.com";
 
-// Percorsi ai file (assumendo la stessa struttura cartelle di prima)
-const abiPath = path.join(__dirname, '../blockchain/abi.json');
+// Percorsi ai file
+const abiPath = path.join(__dirname, '../blockchain/abi.json'); // Controlla che il nome del file sia giusto!
 const addressPath = path.join(__dirname, '../blockchain/contract_address.txt');
 
 // --- CARICAMENTO DATI ---
@@ -26,7 +26,7 @@ try {
 
     console.log(`✅ Contratto caricato: ${contractAddress}`);
 } catch (error) {
-    console.error("❌ ERRORE Iniziale:", error.message);
+    console.error("❌ ERRORE Iniziale (Controlla i file ABI/Address):", error.message);
 }
 
 // --- ROTTE API ---
@@ -34,19 +34,26 @@ app.get('/check_firmware', async (req, res) => {
     try {
         if (!contract) throw new Error("Contratto non inizializzato");
 
-        // Chiama la funzione 'getLatest' dallo Smart Contract
-        // NOTA: Ethers.js restituisce un array o un oggetto
-        const data = await contract.getLatest();
+        console.log("🔍 Richiesta ricevuta dall'ESP32...");
 
-        // Rispondiamo all'ESP32
+        // 1. CORREZIONE NOME FUNZIONE:
+        // Usa getFirmware() (nuovo contratto) invece di getLatest()
+        const result = await contract.getLatest();
+
+        console.log("📦 Dati grezzi dalla Blockchain:", result);
+
+        // 2. CORREZIONE VARIABILE:
+        // Usiamo 'result' perché è lì che abbiamo salvato i dati sopra
         res.json({
-            version: data[0],
-            url: data[1],
-            checksum: data[2]
+            version: result[0],
+            url: result[1],
+            checksum: result[2]
         });
 
+        console.log("✅ Risposta inviata correttamente!");
+
     } catch (error) {
-        console.error("Errore durante la chiamata:", error);
+        console.error("❌ Errore durante la chiamata:", error);
         res.status(500).json({ error: error.message });
     }
 });
