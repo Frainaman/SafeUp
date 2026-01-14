@@ -6,41 +6,28 @@
 #include <SPI.h>
 #include <MFRC522.h>
 
-// ============================================================
-// ⚠️ CONFIGURAZIONE DA MODIFICARE PRIMA DI CARICARE ⚠️
-// ============================================================
-
-// 1. DATI DEL TUO HOTSPOT (O Wi-Fi di casa)
 const char* ssid = "XXXX";
 const char* password = "XXXX";
 
-// 2. L'IP DEL COMPUTER DOVE GIRA IL SERVER (Vedi ipconfig)
-// IMPORTANTE: Mantieni la porta :5000 e il percorso /check_firmware
 String serverUrl = "http://XXX.XXX.XXX.XXX:5000/check_firmware";
 
-// 3. IL CODICE DELLA TUA TESSERA MASTER (Copiato dal test precedente)
 const String MASTER_UID = "1B D2 AB 02";
 
-// ============================================================
-
-// CONFIGURAZIONE HARDWARE
 #define SS_PIN  5
 #define RST_PIN 22
 #define LED_PIN 15
 
-// Versione attuale caricata sull'ESP32
 const char* currentVersion = "0.9";
 
 MFRC522 rfid(SS_PIN, RST_PIN);
 
-// --- FUNZIONE 1: ESEGUE L'AGGIORNAMENTO FISICO ---
 void eseguiOTA(const char* downloadUrl) {
   Serial.println("---------------------------------------------");
   Serial.println(">>> ⬇️ AVVIO DOWNLOAD FIRMWARE (OTA) <<<");
 
   WiFiClientSecure client;
-  client.setInsecure(); // Ignora certificati HTTPS (necessario per GitHub/Ngrok/Locali)
-  httpUpdate.rebootOnUpdate(false); // Gestiamo noi il riavvio
+  client.setInsecure(); 
+  httpUpdate.rebootOnUpdate(false); 
 
   Serial.print("Scaricando da: "); Serial.println(downloadUrl);
 
@@ -62,9 +49,7 @@ void eseguiOTA(const char* downloadUrl) {
   }
 }
 
-// --- FUNZIONE 2: ANALIZZA LA RISPOSTA DELLA BLOCKCHAIN ---
 void gestisciRispostaServer(String payload) {
-  // Riserva memoria per il JSON (aumentato a 1024 per sicurezza)
   StaticJsonDocument<1024> doc;
   DeserializationError error = deserializeJson(doc, payload);
 
@@ -81,25 +66,21 @@ void gestisciRispostaServer(String payload) {
   Serial.print("Versione Attuale (ESP32): "); Serial.println(currentVersion);
   Serial.print("Versione Blockchain:      "); Serial.println(blockchainVersion);
 
-  // Se la versione è diversa (e non vuota), aggiorna
   if (String(blockchainVersion) != "" && String(blockchainVersion) != String(currentVersion)) {
     Serial.println("⚡ NUOVA VERSIONE TROVATA! Procedo...");
 
-    // Feedback visivo: Lampeggio veloce prima dell'update
     for(int i=0; i<5; i++) { digitalWrite(LED_PIN, HIGH); delay(100); digitalWrite(LED_PIN, LOW); delay(100); }
 
     eseguiOTA(downloadUrl);
   } else {
     Serial.println("👍 Il sistema è già aggiornato all'ultima versione sicura.");
-    // Feedback: un lampeggio lungo
     digitalWrite(LED_PIN, HIGH); delay(1000); digitalWrite(LED_PIN, LOW);
   }
 }
 
-// --- FUNZIONE 3: CONTATTA IL MIDDLEWARE ---
 void checkMiddleware() {
   if (WiFi.status() == WL_CONNECTED) {
-    WiFiClient client; // Usa WiFiClient normale per HTTP locale (porta 5000)
+    WiFiClient client; 
     HTTPClient http;
 
     Serial.print("Contattando Middleware: "); Serial.println(serverUrl);
@@ -110,7 +91,6 @@ void checkMiddleware() {
       if (httpCode > 0) {
         String payload = http.getString();
         Serial.println("📩 Dati ricevuti dalla Blockchain!");
-        // Serial.println(payload); // Decommenta se vuoi vedere il JSON grezzo
         gestisciRispostaServer(payload);
       } else {
         Serial.print("❌ Errore HTTP: "); Serial.println(httpCode);
@@ -138,7 +118,7 @@ void setup() {
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500); Serial.print(".");
-    digitalWrite(LED_PIN, !digitalRead(LED_PIN)); // Lampeggia mentre cerca WiFi
+    digitalWrite(LED_PIN, !digitalRead(LED_PIN)); 
   }
   digitalWrite(LED_PIN, LOW);
 
@@ -149,11 +129,9 @@ void setup() {
 }
 
 void loop() {
-  // Standby: Cerca carta
   if (!rfid.PICC_IsNewCardPresent()) return;
   if (!rfid.PICC_ReadCardSerial()) return;
 
-  // Leggi UID
   String uidletta = "";
   for (byte i = 0; i < rfid.uid.size; i++) {
     uidletta.concat(String(rfid.uid.uidByte[i] < 0x10 ? " 0" : " "));
@@ -162,22 +140,19 @@ void loop() {
   uidletta.toUpperCase();
   String codicePulito = uidletta.substring(1);
 
-  // LOGICA DI ACCESSO
   if (codicePulito == MASTER_UID) {
     Serial.println("\n✅ AUTORIZZAZIONE RICEVUTA (Master Key)");
-    digitalWrite(LED_PIN, HIGH); // Accendi LED
+    digitalWrite(LED_PIN, HIGH); 
 
-    checkMiddleware(); // <--- CHIAMA IL SERVER
+    checkMiddleware(); 
 
-    delay(2000); // Pausa per evitare doppie letture
+    delay(2000); 
     digitalWrite(LED_PIN, LOW);
   } else {
     Serial.print("⛔ ACCESSO NEGATO: "); Serial.println(codicePulito);
-    // Lampeggio errore
     for(int i=0; i<3; i++){ digitalWrite(LED_PIN, HIGH); delay(100); digitalWrite(LED_PIN, LOW); delay(100); }
   }
 
-  // Stop lettura e pulizia buffer per evitare i caratteri strani ""
   rfid.PICC_HaltA();
   rfid.PCD_StopCrypto1();
 }
