@@ -125,10 +125,10 @@ void setup() {
   }
   digitalWrite(LED_PIN, LOW);
 
-  Serial.println("\n✅ WiFi Connesso!");
+  Serial.println("\nWiFi Connesso!");
   Serial.print("IP ESP32: "); Serial.println(WiFi.localIP());
   Serial.println("----------------------------------------");
-  Serial.println("🔒 SISTEMA BLOCCATO. Passare carta MASTER per sbloccare.");
+  Serial.println("SISTEMA BLOCCATO. Passare carta MASTER per sbloccare.");
 }
 
 void loop() {
@@ -144,7 +144,7 @@ void loop() {
   String codicePulito = uidletta.substring(1);
 
   if (codicePulito == MASTER_UID) {
-    Serial.println("\n✅ AUTORIZZAZIONE RICEVUTA (Master Key)");
+    Serial.println("\nAUTORIZZAZIONE RICEVUTA (Master Key)");
     digitalWrite(LED_PIN, HIGH);
 
     checkMiddleware();
